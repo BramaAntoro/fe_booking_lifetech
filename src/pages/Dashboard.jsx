@@ -69,6 +69,21 @@ export function Dashboard() {
     navigate("/login");
   }
 
+  async function handleDeleteRoom(roomId) {
+    const confirmDelete = window.confirm(
+      "Apakah Anda yakin ingin menghapus ruangan ini?",
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await api.delete(`/rooms/${roomId}`);
+      await fetchRooms();
+    } catch (error) {
+      console.error("Error deleting room inside dashboard:", error);
+      throw error;
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background p-6">
       <section className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -98,6 +113,7 @@ export function Dashboard() {
             errorMessage={errorMessage}
             isLoading={isLoading}
             onUpdateRoom={handleUpdateRoom}
+            onDeleteRoom={handleDeleteRoom} 
             rooms={rooms}
           />
         </section>

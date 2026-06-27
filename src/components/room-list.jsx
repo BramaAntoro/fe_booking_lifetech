@@ -35,6 +35,7 @@ export function RoomList({
   errorMessage,
   isLoading,
   onUpdateRoom,
+  onDeleteRoom,
   rooms,
 }) {
   const [editingRoomId, setEditingRoomId] = useState(null);
@@ -60,15 +61,30 @@ export function RoomList({
       setEditingRoomId(null);
     } catch (error) {
       console.error("Error updating room:", error);
-      
-      const errorMsg = 
+
+      const errorMsg =
         error?.response?.data?.message ||
         error?.message ||
         "Gagal memperbarui ruangan.";
-      
+
       setUpdateErrorMessage(errorMsg);
     } finally {
       setUpdatingRoomId("");
+    }
+  }
+
+  async function handleDeleteRoom(roomId) {
+    try {
+      await onDeleteRoom?.(roomId);
+    } catch (error) {
+      console.error("Error deleting room:", error);
+
+      const errorMsg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Gagal menghapus ruangan.";
+
+      alert(errorMsg);
     }
   }
 
@@ -214,6 +230,14 @@ export function RoomList({
                     }}
                   >
                     Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive" 
+                    onClick={() => handleDeleteRoom(room.id)}
+                  >
+                    Delete
                   </Button>
                 </CardContent>
               </>
