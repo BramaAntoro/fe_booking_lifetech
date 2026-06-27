@@ -113,7 +113,8 @@ export function Dashboard() {
             errorMessage={errorMessage}
             isLoading={isLoading}
             onUpdateRoom={handleUpdateRoom}
-            onDeleteRoom={handleDeleteRoom} 
+            onDeleteRoom={handleDeleteRoom}
+            onBookingCreated={fetchRooms}
             rooms={rooms}
           />
         </section>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
+import { api } from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -41,6 +42,115 @@ export function RoomList({
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [updateErrorMessage, setUpdateErrorMessage] = useState("");
   const [updatingRoomId, setUpdatingRoomId] = useState("");
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
+  const [bookingRoom, setBookingRoom] = useState(null);
+  const [bookingSchedules, setBookingSchedules] = useState([]);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [bookingError, setBookingError] = useState("");
+  const [bookingSuccess, setBookingSuccess] = useState("");
+
+  function formatDateTime(value) {
+    return new Intl.DateTimeFormat("id-ID", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  }
+
+  async function fetchBookingSchedules(roomId) {
+    try {
+      setBookingLoading(true);
+      setBookingError("");
+
+      const response = await api.get(`/rooms/${roomId}`);
+      setBookingSchedules(response.data.data.bookedSchedules ?? []);
+    } catch (error) {
+      console.error("Error fetching booking schedules:", error);
+      setBookingError(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Gagal memuat jadwal booking.",
+      );
+    } finally {
+      setBookingLoading(false);
+    }
+  }
+
+  async function openBookingModal(room) {
+    setBookingRoom(room);
+    setBookingSchedules([]);
+    setBookingError("");
+    setBookingSuccess("");
+    setIsBookingOpen(true);
+
+    await fetchBookingSchedules(room.id);
+  }
+
+  function closeBookingModal() {
+    setIsBookingOpen(false);
+    setBookingRoom(null);
+    setBookingSchedules([]);
+    setBookingError("");
+    setBookingSuccess("");
+  }
+
+  async function handleBookingSubmit(event) {
+    event.preventDefault();
+    setBookingError("");
+    setBookingSuccess("");
+
+    if (!bookingRoom) {
+      setBookingError("Pilih ruangan terlebih dahulu.");
+      return;
+    }
+
+    const formData = new FormData(event.currentTarget);
+    const rawStartTime = formData.get("startTime");
+    const localUser = localStorage.getItem("user");
+    const user = localUser ? JSON.parse(localUser) : null;
+    const bookedByName = user?.name || formData.get("bookedByName")?.trim();
+
+    if (!rawStartTime) {
+      setBookingError("Tanggal dan jam booking wajib diisi.");
+      return;
+    }
+
+    const startTime = `${rawStartTime}:00+07:00`;
+
+    if (!bookedByName) {
+      setBookingError("Nama pemesan wajib diisi.");
+      return;
+    }
+
+    try {
+      setBookingSubmitting(true);
+      console.log("Posting booking", {
+        roomId: bookingRoom.id,
+        startTime,
+        bookedByName,
+      });
+      await api.post("/bookings", {
+        roomId: bookingRoom.id,
+        startTime,
+        bookedByName,
+      });
+
+      setBookingSuccess("Booking berhasil dibuat.");
+      await fetchBookingSchedules(bookingRoom.id);
+      if (typeof onBookingCreated === "function") {
+        onBookingCreated();
+      }
+    } catch (error) {
+      console.error("Error creating booking:", error);
+      setBookingError(
+        error?.response?.data?.message ||
+          error?.message ||
+          "Gagal membuat booking.",
+      );
+    } finally {
+      setBookingSubmitting(false);
+    }
+  }
 
   async function handleUpdateSubmit(event, room) {
     event.preventDefault();
@@ -224,6 +334,14 @@ export function RoomList({
                     type="button"
                     size="sm"
                     variant="outline"
+                    onClick={() => openBookingModal(room)}
+                  >
+                    Booking
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
                     onClick={() => {
                       setUpdateErrorMessage("");
                       setEditingRoomId(room.id);
@@ -234,7 +352,7 @@ export function RoomList({
                   <Button
                     type="button"
                     size="sm"
-                    variant="destructive" 
+                    variant="destructive"
                     onClick={() => handleDeleteRoom(room.id)}
                   >
                     Delete
@@ -245,6 +363,143 @@ export function RoomList({
           </Card>
         );
       })}
+
+      {isBookingOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/10">
+            <div className="flex flex-col gap-3 border-b border-muted/20 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Booking Ruangan</p>
+                <h2 className="text-xl font-semibold">
+                  {bookingRoom?.name ?? "Booking"}
+                </h2>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeBookingModal}
+              >
+                Tutup
+              </Button>
+            </div>
+
+            <div className="grid gap-4 p-6 lg:grid-cols-[1.1fr_0.9fr]">
+              <div className="space-y-4 rounded-3xl border border-muted/20 bg-muted/10 p-4">
+                <div>
+                  <h3 className="text-base font-semibold">Form Booking</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Pilih tanggal dan jam untuk memesan ruangan.
+                  </p>
+                </div>
+                <form onSubmit={handleBookingSubmit} className="space-y-4">
+                  <div className="grid gap-2">
+                    <label
+                      htmlFor="booking-start"
+                      className="text-sm font-medium"
+                    >
+                      Tanggal & Jam
+                    </label>
+                    <input
+                      id="booking-start"
+                      name="startTime"
+                      type="datetime-local"
+                      className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                    />
+                  </div>
+
+                  {!localStorage.getItem("user") && (
+                    <div className="grid gap-2">
+                      <label
+                        htmlFor="bookedByName"
+                        className="text-sm font-medium"
+                      >
+                        Nama Pemesan
+                      </label>
+                      <input
+                        id="bookedByName"
+                        name="bookedByName"
+                        type="text"
+                        placeholder="Masukkan nama pemesan"
+                        className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                      />
+                    </div>
+                  )}
+
+                  {bookingError ? (
+                    <p className="text-sm text-destructive">{bookingError}</p>
+                  ) : null}
+                  {bookingSuccess ? (
+                    <p className="text-sm text-green-700">{bookingSuccess}</p>
+                  ) : null}
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="submit" disabled={bookingSubmitting}>
+                      {bookingSubmitting ? "Menyimpan..." : "Booking"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={closeBookingModal}
+                    >
+                      Batal
+                    </Button>
+                  </div>
+                </form>
+              </div>
+
+              <div className="space-y-4 rounded-3xl border border-muted/20 bg-muted/10 p-4">
+                <div>
+                  <h3 className="text-base font-semibold">Jadwal Booking</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Jadwal aktif ruangan ini yang akan datang.
+                  </p>
+                </div>
+
+                {bookingLoading ? (
+                  <Card>
+                    <CardContent className="py-6 text-sm text-muted-foreground">
+                      Memuat jadwal booking...
+                    </CardContent>
+                  </Card>
+                ) : bookingSchedules.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-6 text-sm text-muted-foreground">
+                      Belum ada jadwal booking.
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {bookingSchedules.map((schedule) => (
+                      <Card key={schedule.id} className="rounded-2xl">
+                        <CardContent className="space-y-2 py-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Pemesan</p>
+                            <p className="font-medium">
+                              {schedule.bookedByName}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Mulai</p>
+                            <p className="font-medium">
+                              {formatDateTime(schedule.startTime)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Selesai</p>
+                            <p className="font-medium">
+                              {formatDateTime(schedule.endTime)}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
