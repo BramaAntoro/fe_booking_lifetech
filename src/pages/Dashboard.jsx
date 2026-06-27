@@ -14,6 +14,8 @@ export function Dashboard() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [updateErrorMessage, setUpdateErrorMessage] = useState("");
+  const [updatingRoomId, setUpdatingRoomId] = useState("");
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
 
@@ -67,6 +69,33 @@ export function Dashboard() {
     }
   }
 
+  async function handleUpdateRoom(roomId, payload) {
+    setUpdateErrorMessage("");
+
+    if (!payload.name) {
+      setUpdateErrorMessage("Nama ruangan wajib diisi.");
+      setUpdatingRoomId(roomId);
+      return false;
+    }
+
+    setUpdatingRoomId(roomId);
+
+    try {
+      await api.put(`/rooms/${roomId}`, payload);
+      await fetchRooms();
+      return true;
+    } catch (error) {
+      setUpdateErrorMessage(
+        error.response?.data?.message ??
+          error.message ??
+          "Gagal memperbarui ruangan."
+      );
+      return false;
+    } finally {
+      setUpdatingRoomId("");
+    }
+  }
+
   function handleLogout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -106,7 +135,10 @@ export function Dashboard() {
           <RoomList
             errorMessage={errorMessage}
             isLoading={isLoading}
+            onUpdateRoom={handleUpdateRoom}
             rooms={rooms}
+            updateErrorMessage={updateErrorMessage}
+            updatingRoomId={updatingRoomId}
           />
         </section>
       </section>
