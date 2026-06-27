@@ -1,8 +1,17 @@
-import { useState } from "react";
-import "./App.css";
+import { Navigate, Route, Routes } from "react-router-dom"
+
+import "./App.css"
+import { Login } from "@/pages/Login"
+import { Register } from "@/pages/Register"
 
 function App() {
-  return <h1 class="text-3xl font-bold ">Hello world!</h1>;
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to="/register" replace />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/login" element={<Login />} />
+    </Routes>
+  )
 }
 
-export default App;
+export default App
