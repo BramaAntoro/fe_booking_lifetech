@@ -1,8 +1,17 @@
-import { Button } from "@/components/ui/button"
+import { useNavigate } from "react-router-dom";
+
+import { Button } from "@/components/ui/button";
 
 export function Dashboard() {
-  const storedUser = localStorage.getItem("user")
-  const user = storedUser ? JSON.parse(storedUser) : null
+  const navigate = useNavigate();
+  const storedUser = localStorage.getItem("user");
+  const user = storedUser ? JSON.parse(storedUser) : null;
+
+  function handleLogout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  }
 
   return (
     <main className="min-h-screen bg-background p-6">
@@ -13,10 +22,10 @@ export function Dashboard() {
             Selamat datang{user?.name ? `, ${user.name}` : ""}
           </h1>
         </div>
-        <Button type="button" variant="outline">
+        <Button type="button" variant="outline" onClick={handleLogout}>
           Logout
         </Button>
       </section>
     </main>
-  )
+  );
 }
