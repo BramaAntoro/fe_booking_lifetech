@@ -4,6 +4,7 @@ import "./App.css"
 import { Dashboard } from "@/pages/Dashboard"
 import { Login } from "@/pages/Login"
 import { Register } from "@/pages/Register"
+import { RoomDetail } from "@/pages/RoomDetail"
 
 function ProtectedRoute({ children }) {
   const token = localStorage.getItem("token")
@@ -33,6 +34,14 @@ function App() {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/rooms/:id"
+        element={
+          <ProtectedRoute>
+            <RoomDetail />
           </ProtectedRoute>
         }
       />
