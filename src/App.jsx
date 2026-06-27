@@ -1,8 +1,60 @@
-import { useState } from "react";
-import "./App.css";
+import { Navigate, Route, Routes } from "react-router-dom"
 
-function App() {
-  return <h1 class="text-3xl font-bold ">Hello world!</h1>;
+import "./App.css"
+import { Dashboard } from "@/pages/Dashboard"
+import { Login } from "@/pages/Login"
+import { Register } from "@/pages/Register"
+
+function ProtectedRoute({ children }) {
+  const token = localStorage.getItem("token")
+
+  if (!token) {
+    return <Navigate to="/login" replace />
+  }
+
+  return children
 }
 
-export default App;
+function GuestRoute({ children }) {
+  const token = localStorage.getItem("token")
+
+  if (token) {
+    return <Navigate to="/" replace />
+  }
+
+  return children
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <GuestRoute>
+            <Register />
+          </GuestRoute>
+        }
+      />
+      <Route
+        path="/login"
+        element={
+          <GuestRoute>
+            <Login />
+          </GuestRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
+
+export default App
