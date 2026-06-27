@@ -1,3 +1,6 @@
+import { Link } from "react-router-dom";
+
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -17,7 +20,7 @@ const roomColorLabels = {
   blue: "Tersedia",
   red: "Sedang digunakan",
   yellow: "Segera",
-  grey: "Pemiliharan",
+  grey: "Pemeliharaan",
 };
 
 export function RoomList({ errorMessage, isLoading, rooms }) {
@@ -62,7 +65,7 @@ export function RoomList({ errorMessage, isLoading, rooms }) {
           <Card key={room.id} className="rounded-lg">
             <CardHeader>
               <div className="flex items-start justify-between gap-3">
-                <div>
+                <div className="min-w-0">
                   <CardTitle>{room.name}</CardTitle>
                   <CardDescription>
                     {room.deviceId ?? "Device belum terhubung"}
@@ -75,6 +78,11 @@ export function RoomList({ errorMessage, isLoading, rooms }) {
                 </span>
               </div>
             </CardHeader>
+            <CardContent>
+              <Button asChild size="sm" variant="outline">
+                <Link to={`/rooms/${room.id}`}>Cek detail</Link>
+              </Button>
+            </CardContent>
           </Card>
         );
       })}
