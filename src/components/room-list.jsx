@@ -36,25 +36,39 @@ export function RoomList({
   isLoading,
   onUpdateRoom,
   rooms,
-  updateErrorMessage,
-  updatingRoomId,
 }) {
   const [editingRoomId, setEditingRoomId] = useState(null);
+  const [updateErrorMessage, setUpdateErrorMessage] = useState("");
+  const [updatingRoomId, setUpdatingRoomId] = useState("");
 
   async function handleUpdateSubmit(event, room) {
     event.preventDefault();
 
     const formData = new FormData(event.currentTarget);
     const deviceId = formData.get("deviceId")?.trim();
-
-    const isSuccess = await onUpdateRoom?.(room.id, {
+    const payload = {
       name: formData.get("name")?.trim(),
       deviceId: deviceId || null,
       status: formData.get("status"),
-    });
+    };
 
-    if (isSuccess) {
+    setUpdateErrorMessage("");
+    setUpdatingRoomId(room.id);
+
+    try {
+      await onUpdateRoom?.(room.id, payload);
       setEditingRoomId(null);
+    } catch (error) {
+      console.error("Error updating room:", error);
+      
+      const errorMsg = 
+        error?.response?.data?.message ||
+        error?.message ||
+        "Gagal memperbarui ruangan.";
+      
+      setUpdateErrorMessage(errorMsg);
+    } finally {
+      setUpdatingRoomId("");
     }
   }
 
@@ -143,7 +157,7 @@ export function RoomList({
                         <option value="MAINTENANCE">Maintenance</option>
                       </select>
                     </Field>
-                    {updateErrorMessage && updatingRoomId === room.id ? (
+                    {updateErrorMessage ? (
                       <FieldError>{updateErrorMessage}</FieldError>
                     ) : null}
                     <div className="flex gap-2">
@@ -158,7 +172,10 @@ export function RoomList({
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() => setEditingRoomId(null)}
+                        onClick={() => {
+                          setEditingRoomId(null);
+                          setUpdateErrorMessage("");
+                        }}
                       >
                         Batal
                       </Button>
@@ -191,7 +208,10 @@ export function RoomList({
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => setEditingRoomId(room.id)}
+                    onClick={() => {
+                      setUpdateErrorMessage("");
+                      setEditingRoomId(room.id);
+                    }}
                   >
                     Edit
                   </Button>

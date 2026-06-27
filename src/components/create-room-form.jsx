@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,11 +18,12 @@ import {
 import { Input } from "@/components/ui/input";
 
 export function CreateRoomForm({
-  errorMessage,
-  isSubmitting = false,
   onSubmit,
-  successMessage,
 }) {
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
   function handleSubmit(event) {
     event.preventDefault();
 
@@ -28,7 +31,28 @@ export function CreateRoomForm({
     const formData = new FormData(form);
     const name = formData.get("name")?.trim();
 
-    onSubmit?.({ name, reset: () => form.reset() });
+    setErrorMessage("");
+    setSuccessMessage("");
+    setIsSubmitting(true);
+
+    Promise.resolve(onSubmit?.({ name }))
+      .then((result) => {
+        setSuccessMessage(result?.message ?? "Ruangan berhasil dibuat.");
+        form.reset();
+      })
+      .catch((error) => {
+        console.error("Error creating room:", error);
+        
+        const errorMsg =
+          error?.response?.data?.message ||
+          error?.message ||
+          "Gagal membuat ruangan.";
+        
+        setErrorMessage(errorMsg);
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   }
 
   return (

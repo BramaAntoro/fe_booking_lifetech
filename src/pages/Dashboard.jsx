@@ -9,13 +9,8 @@ import { api } from "@/lib/axios";
 export function Dashboard() {
   const navigate = useNavigate();
   const [rooms, setRooms] = useState([]);
-  const [createErrorMessage, setCreateErrorMessage] = useState("");
-  const [createSuccessMessage, setCreateSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [updateErrorMessage, setUpdateErrorMessage] = useState("");
-  const [updatingRoomId, setUpdatingRoomId] = useState("");
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
 
@@ -28,11 +23,14 @@ export function Dashboard() {
 
       setRooms(response.data.data);
     } catch (error) {
-      setErrorMessage(
-        error.response?.data?.message ??
-          error.message ??
-          "Gagal mengambil data ruangan."
-      );
+      console.error("Error fetching rooms:", error);
+
+      const errorMsg =
+        error.response?.data?.message ||
+        error.message ||
+        "Gagal mengambil data ruangan.";
+
+      setErrorMessage(errorMsg);
     } finally {
       setIsLoading(false);
     }
@@ -42,57 +40,26 @@ export function Dashboard() {
     fetchRooms();
   }, []);
 
-  async function handleCreateRoom({ name, reset }) {
-    setCreateErrorMessage("");
-    setCreateSuccessMessage("");
-
+  async function handleCreateRoom({ name }) {
     if (!name) {
-      setCreateErrorMessage("Nama ruangan wajib diisi.");
-      return;
+      throw new Error("Nama ruangan wajib diisi.");
     }
 
-    setIsCreating(true);
-
-    try {
-      await api.post("/rooms", { name });
-      reset?.();
-      setCreateSuccessMessage("Ruangan berhasil dibuat.");
-      await fetchRooms();
-    } catch (error) {
-      setCreateErrorMessage(
-        error.response?.data?.message ??
-          error.message ??
-          "Gagal membuat ruangan."
-      );
-    } finally {
-      setIsCreating(false);
-    }
+    await api.post("/rooms", { name });
+    await fetchRooms();
   }
 
   async function handleUpdateRoom(roomId, payload) {
-    setUpdateErrorMessage("");
-
     if (!payload.name) {
-      setUpdateErrorMessage("Nama ruangan wajib diisi.");
-      setUpdatingRoomId(roomId);
-      return false;
+      throw new Error("Nama ruangan wajib diisi.");
     }
-
-    setUpdatingRoomId(roomId);
 
     try {
       await api.put(`/rooms/${roomId}`, payload);
       await fetchRooms();
-      return true;
     } catch (error) {
-      setUpdateErrorMessage(
-        error.response?.data?.message ??
-          error.message ??
-          "Gagal memperbarui ruangan."
-      );
-      return false;
-    } finally {
-      setUpdatingRoomId("");
+      console.error("Error updating room inside dashboard:", error);
+      throw error;
     }
   }
 
@@ -117,12 +84,7 @@ export function Dashboard() {
           </Button>
         </header>
 
-        <CreateRoomForm
-          errorMessage={createErrorMessage}
-          isSubmitting={isCreating}
-          onSubmit={handleCreateRoom}
-          successMessage={createSuccessMessage}
-        />
+        <CreateRoomForm onSubmit={handleCreateRoom} />
 
         <section className="space-y-3">
           <div>
@@ -137,8 +99,6 @@ export function Dashboard() {
             isLoading={isLoading}
             onUpdateRoom={handleUpdateRoom}
             rooms={rooms}
-            updateErrorMessage={updateErrorMessage}
-            updatingRoomId={updatingRoomId}
           />
         </section>
       </section>
