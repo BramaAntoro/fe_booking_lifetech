@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { CreateRoomForm } from "@/components/create-room-form";
 import { RoomList } from "@/components/room-list";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/axios";
@@ -8,45 +9,63 @@ import { api } from "@/lib/axios";
 export function Dashboard() {
   const navigate = useNavigate();
   const [rooms, setRooms] = useState([]);
+  const [createErrorMessage, setCreateErrorMessage] = useState("");
+  const [createSuccessMessage, setCreateSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const storedUser = localStorage.getItem("user");
   const user = storedUser ? JSON.parse(storedUser) : null;
 
+  async function fetchRooms() {
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      const response = await api.get("/rooms");
+
+      setRooms(response.data.data);
+    } catch (error) {
+      setErrorMessage(
+        error.response?.data?.message ??
+          error.message ??
+          "Gagal mengambil data ruangan."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
   useEffect(() => {
-    let isMounted = true;
+    fetchRooms();
+  }, []);
 
-    async function fetchRooms() {
-      setIsLoading(true);
-      setErrorMessage("");
+  async function handleCreateRoom({ name, reset }) {
+    setCreateErrorMessage("");
+    setCreateSuccessMessage("");
 
-      try {
-        const response = await api.get("/rooms");
-
-        if (isMounted) {
-          setRooms(response.data.data);
-        }
-      } catch (error) {
-        if (isMounted) {
-          setErrorMessage(
-            error.response?.data?.message ??
-              error.message ??
-              "Gagal mengambil data ruangan."
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
+    if (!name) {
+      setCreateErrorMessage("Nama ruangan wajib diisi.");
+      return;
     }
 
-    fetchRooms();
+    setIsCreating(true);
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    try {
+      await api.post("/rooms", { name });
+      reset?.();
+      setCreateSuccessMessage("Ruangan berhasil dibuat.");
+      await fetchRooms();
+    } catch (error) {
+      setCreateErrorMessage(
+        error.response?.data?.message ??
+          error.message ??
+          "Gagal membuat ruangan."
+      );
+    } finally {
+      setIsCreating(false);
+    }
+  }
 
   function handleLogout() {
     localStorage.removeItem("token");
@@ -68,6 +87,13 @@ export function Dashboard() {
             Logout
           </Button>
         </header>
+
+        <CreateRoomForm
+          errorMessage={createErrorMessage}
+          isSubmitting={isCreating}
+          onSubmit={handleCreateRoom}
+          successMessage={createSuccessMessage}
+        />
 
         <section className="space-y-3">
           <div>
