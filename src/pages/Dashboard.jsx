@@ -84,6 +84,30 @@ export function Dashboard() {
     }
   }
 
+  useEffect(() => {
+    // 1. Jalankan fetch pertama kali saat halaman di-load
+    fetchRooms();
+
+    // 2. Set interval untuk melakukan HTTP Polling setiap 5 detik 🎯
+    const pollingRooms = setInterval(() => {
+      // Kita buat fungsi fetch khusus background agar tidak memicu 
+      // state 'isLoading' utama yang bikin layar kelap-kelip saklar loader
+      fetchRoomsSilent(); 
+    }, 5000);
+
+    // 3. Bersihkan interval saat user pindah halaman (component unmount)
+    return () => clearInterval(pollingRooms);
+  }, []);
+
+  async function fetchRoomsSilent() {
+    try {
+      const response = await api.get("/rooms");
+      setRooms(response.data.data); // Langsung update list tanpa mengubah setIsLoading(true)
+    } catch (error) {
+      console.error("Error polling rooms:", error);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-background p-6">
       <section className="mx-auto flex max-w-5xl flex-col gap-6">
